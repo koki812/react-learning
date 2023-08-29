@@ -1,7 +1,6 @@
 // EditableCell.tsx
 
-import React, { useState } from 'react';
-import { Input } from 'antd';
+import React, { useState, useEffect } from 'react';
 
 interface EditableCellProps {
   editing: boolean;
@@ -9,7 +8,6 @@ interface EditableCellProps {
   title: string;
   inputType: 'text' | 'number';
   record: any;
-  index: number;
   handleSave: (record: any) => void;
 }
 
@@ -19,10 +17,15 @@ const EditableCell: React.FC<EditableCellProps> = ({
   title,
   inputType,
   record,
-  index,
   handleSave,
 }) => {
   const [inputValue, setInputValue] = useState(record[dataIndex]);
+
+  useEffect(() => {
+    if (editing) {
+      setInputValue(record[dataIndex]);
+    }
+  }, [editing]);
 
   const save = () => {
     handleSave({ ...record, [dataIndex]: inputValue });
@@ -32,11 +35,15 @@ const EditableCell: React.FC<EditableCellProps> = ({
 
   if (editing) {
     cellContent = (
-      <Input
+      <input
         value={inputValue}
         onChange={(e) => setInputValue(e.target.value)}
-        onPressEnter={save}
         onBlur={save}
+        onKeyPress={(e) => {
+          if (e.key === 'Enter') {
+            save();
+          }
+        }}
       />
     );
   }

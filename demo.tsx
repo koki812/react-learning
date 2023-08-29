@@ -19,6 +19,13 @@ const App: React.FC = () => {
       age: 32,
       address: 'London, Park Lane no. 0',
     },
+    { key: '1', name: 'John Doe', age: 28, address: 'New York, Broadway' },
+    {
+      key: '2',
+      name: 'Jane Smith',
+      age: 24,
+      address: 'Los Angeles, Sunset Blvd',
+    },
     // ... Add more data items
   ]);
 
@@ -53,7 +60,6 @@ const App: React.FC = () => {
           title="Name"
           inputType="text"
           record={record}
-          index={record.key as number}
           handleSave={handleSave}
         />
       ),
@@ -68,7 +74,6 @@ const App: React.FC = () => {
           title="Age"
           inputType="number"
           record={record}
-          index={record.key as number}
           handleSave={handleSave}
         />
       ),
@@ -83,7 +88,6 @@ const App: React.FC = () => {
           title="Address"
           inputType="text"
           record={record}
-          index={record.key as number}
           handleSave={handleSave}
         />
       ),

@@ -1,107 +1,94 @@
-// App.tsx
-
 import React, { useState } from 'react';
-import { Table } from 'antd';
-import EditableCell from './EditableCell';
+import { Table, Input } from 'antd';
 
-interface DataType {
-  key: React.Key;
+interface Item {
+  key: string;
   name: string;
   age: number;
-  address: string;
+}
+
+interface Column {
+  key: string;
+  dataIndex: string;
 }
 
 const App: React.FC = () => {
-  const [data, setData] = useState<DataType[]>([
-    {
-      key: '0',
-      name: 'Edward King 0',
-      age: 32,
-      address: 'London, Park Lane no. 0',
-    },
-    { key: '1', name: 'John Doe', age: 28, address: 'New York, Broadway' },
-    {
-      key: '2',
-      name: 'Jane Smith',
-      age: 24,
-      address: 'Los Angeles, Sunset Blvd',
-    },
-    // ... Add more data items
+  const [dataSource, setDataSource] = useState<Item[]>([
+    { key: '0', name: 'koki', age: 18 },
+    { key: '1', name: 'koki', age: 18 },
   ]);
+  const [editingKey, setEditingKey] = useState<string | null>(null);
 
-  const [editingKey, setEditingKey] = useState('');
-
-  const isEditing = (record: DataType) => record.key === editingKey;
-
-  const handleDoubleClick = (record: DataType) => {
-    setEditingKey(record.key);
-  };
-
-  const handleSave = (record: DataType) => {
-    const newData = [...data];
-    const index = newData.findIndex((item) => record.key === item.key);
-
-    if (index > -1) {
-      const item = newData[index];
-      newData.splice(index, 1, { ...item, ...record });
-      setData(newData);
-      setEditingKey('');
-    }
-  };
-
-  const columns = [
-    {
-      title: 'Name',
-      dataIndex: 'name',
-      render: (text: string, record: DataType) => (
-        <EditableCell
-          editing={isEditing(record)}
-          dataIndex="name"
-          title="Name"
-          inputType="text"
-          record={record}
-          handleSave={handleSave}
-        />
-      ),
-    },
-    {
-      title: 'Age',
-      dataIndex: 'age',
-      render: (text: number, record: DataType) => (
-        <EditableCell
-          editing={isEditing(record)}
-          dataIndex="age"
-          title="Age"
-          inputType="number"
-          record={record}
-          handleSave={handleSave}
-        />
-      ),
-    },
-    {
-      title: 'Address',
-      dataIndex: 'address',
-      render: (text: string, record: DataType) => (
-        <EditableCell
-          editing={isEditing(record)}
-          dataIndex="address"
-          title="Address"
-          inputType="text"
-          record={record}
-          handleSave={handleSave}
-        />
-      ),
-    },
+  const columns: Column[] = [
+    { key: 'name', dataIndex: 'name' },
+    { key: 'age', dataIndex: 'age' },
   ];
+
+  const editCell = (key: string, dataIndex: string, value: any) => {
+    const newData = dataSource.map((item) =>
+      item.key === key ? { ...item, [dataIndex]: value } : item
+    );
+    setDataSource(newData);
+    setEditingKey(null);
+  };
+
+  const isEditing = (record: Item) => record.key === editingKey;
+
+  const EditableCell = ({
+    editing,
+    dataIndex,
+    title,
+    record,
+    index,
+    children,
+    ...restProps
+  }: any) => {
+    const inputNode = <Input />;
+
+    return (
+      <td {...restProps}>
+        {editing ? (
+          <Input
+            value={record[dataIndex]}
+            onChange={(e) => editCell(record.key, dataIndex, e.target.value)}
+            onPressEnter={() =>
+              editCell(record.key, dataIndex, record[dataIndex])
+            }
+            onBlur={() => editCell(record.key, dataIndex, record[dataIndex])}
+          />
+        ) : (
+          children
+        )}
+      </td>
+    );
+  };
 
   return (
     <Table
-      bordered
-      dataSource={data}
-      columns={columns}
-      rowClassName={(record) => (isEditing(record) ? 'editable-row' : '')}
-      onRow={(record) => ({
-        onDoubleClick: () => handleDoubleClick(record),
+      dataSource={dataSource}
+      columns={columns.map((column) => {
+        return {
+          ...column,
+          onCell: (record: Item) => ({
+            record,
+            dataIndex: column.dataIndex,
+            title: column.key,
+            editing: isEditing(record),
+          }),
+        };
+      })}
+      rowKey="key"
+      components={{
+        body: {
+          cell: EditableCell,
+        },
+      }}
+      onRow={(record: Item, index: number) => ({
+        onDoubleClick: () => {
+          if (!editingKey) {
+            setEditingKey(record.key);
+          }
+        },
       })}
     />
   );

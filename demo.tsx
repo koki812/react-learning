@@ -1,96 +1,233 @@
-import React, { useState } from 'react';
-import { Table, Input } from 'antd';
+import React, { useContext, useEffect, useRef, useState } from 'react';
+import './index.css';
+import type { InputRef } from 'antd';
+import { Button, Form, Input, Popconfirm, Table } from 'antd';
+import type { FormInstance } from 'antd/es/form';
+import { TableRowSelection } from 'antd/es/table/interface';
+
+const EditableContext = React.createContext<FormInstance<any> | null>(null);
 
 interface Item {
   key: string;
   name: string;
-  age: number;
+  age: string;
+  address: string;
 }
 
-interface Column {
-  key: string;
-  dataIndex: string;
+interface EditableRowProps {
+  index: number;
 }
 
-const App: React.FC = () => {
-  const [dataSource, setDataSource] = useState<Item[]>([
-    { key: '0', name: 'koki', age: 18 },
-    { key: '1', name: 'koki', age: 18 },
-  ]);
-  const [editingKey, setEditingKey] = useState<string | null>(null);
+const EditableRow: React.FC<EditableRowProps> = ({ index, ...props }) => {
+  const [form] = Form.useForm();
+  return (
+    <Form form={form} component={false}>
+      <EditableContext.Provider value={form}>
+        <tr {...props} />
+      </EditableContext.Provider>
+    </Form>
+  );
+};
 
-  const columns: Column[] = [
-    { key: 'name', dataIndex: 'name' },
-    { key: 'age', dataIndex: 'age' },
-  ];
+interface EditableCellProps {
+  title: React.ReactNode;
+  editable: boolean;
+  children: React.ReactNode;
+  dataIndex: keyof Item;
+  record: Item;
+  handleSave: (record: Item) => void;
+}
 
-  const editCell = (key: string, dataIndex: string, value: any) => {
-    const newData = dataSource.map((item) =>
-      item.key === key ? { ...item, [dataIndex]: value } : item
-    );
-    setDataSource(newData);
-    setEditingKey(null);
+const EditableCell: React.FC<EditableCellProps> = ({
+  title,
+  editable,
+  children,
+  dataIndex,
+  record,
+  handleSave,
+  ...restProps
+}) => {
+  const [editing, setEditing] = useState(false);
+  const inputRef = useRef<InputRef>(null);
+  const form = useContext(EditableContext)!;
+
+  useEffect(() => {
+    if (editing) {
+      inputRef.current!.focus();
+    }
+  }, [editing]);
+
+  const toggleEdit = () => {
+    setEditing(!editing);
+    form.setFieldsValue({ [dataIndex]: record[dataIndex] });
   };
 
-  const isEditing = (record: Item) => record.key === editingKey;
+  const save = async () => {
+    try {
+      const values = await form.validateFields();
 
-  const EditableCell = ({
-    editing,
-    dataIndex,
-    title,
-    record,
-    index,
-    children,
-    ...restProps
-  }: any) => {
-    const inputNode = <Input />;
+      toggleEdit();
+      handleSave({ ...record, ...values });
+    } catch (errInfo) {
+      console.log('Save failed:', errInfo);
+    }
+  };
 
-    return (
-      <td {...restProps}>
-        {editing ? (
-          <Input
-            value={record[dataIndex]}
-            onChange={(e) => editCell(record.key, dataIndex, e.target.value)}
-            onPressEnter={() =>
-              editCell(record.key, dataIndex, record[dataIndex])
-            }
-            onBlur={() => editCell(record.key, dataIndex, record[dataIndex])}
-          />
-        ) : (
-          children
-        )}
-      </td>
+  let childNode = children;
+
+  if (editable) {
+    childNode = editing ? (
+      <Form.Item
+        style={{ margin: 0 }}
+        name={dataIndex}
+        rules={[
+          {
+            required: true,
+            message: `${title} is required.`,
+          },
+        ]}
+      >
+        <Input ref={inputRef} onPressEnter={save} onBlur={save} />
+      </Form.Item>
+    ) : (
+      <div
+        className="editable-cell-value-wrap"
+        style={{ paddingRight: 24 }}
+        onDoubleClick={toggleEdit}
+      >
+        {children}
+      </div>
     );
+  }
+
+  return <td {...restProps}>{childNode}</td>;
+};
+
+type EditableTableProps = Parameters<typeof Table>[0];
+
+interface DataType {
+  key: React.Key;
+  name: React.ReactNode;
+  age: string;
+  address: string;
+}
+
+type ColumnTypes = Exclude<EditableTableProps['columns'], undefined>;
+
+const App: React.FC = () => {
+  const [dataSource, setDataSource] = useState<DataType[]>([
+    {
+      key: '0',
+      name: 'Edward King 0',
+      age: '32',
+      address: 'London, Park Lane no. 0',
+    },
+    {
+      key: '1',
+      name: 'Edward King 1',
+      age: '32',
+      address: 'London, Park Lane no. 1',
+    },
+  ]);
+
+  const handleDelete = (key: React.Key) => {
+    const newData = dataSource.filter((item) => item.key !== key);
+    setDataSource(newData);
+  };
+
+  const defaultColumns: (ColumnTypes[number] & {
+    editable?: boolean;
+    dataIndex: string;
+  })[] = [
+    {
+      title: 'name',
+      dataIndex: 'name',
+      width: '50%',
+      editable: true,
+      render: (text: string, record: DataType) => (
+        <span>
+          <EditableCell
+            title="name"
+            editable={true}
+            dataIndex="name"
+            record={record}
+            handleSave={handleSave}
+          >
+            {text}
+          </EditableCell>
+          {dataSource.length >= 1 ? (
+            <Button onClick={() => handleDelete(record.key)}>删除</Button>
+          ) : null}
+        </span>
+      ),
+    },
+    {
+      title: 'age',
+      dataIndex: 'age',
+      editable: true,
+    },
+    {
+      title: 'address',
+      dataIndex: 'address',
+      editable: true,
+    },
+  ];
+
+  const handleSave = (row: DataType) => {
+    const newData = [...dataSource];
+    const index = newData.findIndex((item) => row.key === item.key);
+    const item = newData[index];
+    newData.splice(index, 1, {
+      ...item,
+      ...row,
+    });
+    setDataSource(newData);
+  };
+
+  const components = {
+    body: {
+      row: EditableRow,
+      cell: EditableCell,
+    },
+  };
+
+  const columns = defaultColumns.map((col) => {
+    if (!col.editable) {
+      return col;
+    }
+    return {
+      ...col,
+      onCell: (record: DataType) => ({
+        record,
+        editable: col.editable,
+        dataIndex: col.dataIndex,
+        title: col.title,
+        handleSave,
+      }),
+    };
+  });
+
+  const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+
+  const onSelectChange = (newSelectedRowKeys: React.Key[]) => {
+    setSelectedRowKeys(newSelectedRowKeys);
+  };
+
+  const rowSelection: TableRowSelection<DataType> = {
+    selectedRowKeys,
+    onChange: onSelectChange,
   };
 
   return (
-    <Table
-      dataSource={dataSource}
-      columns={columns.map((column) => {
-        return {
-          ...column,
-          onCell: (record: Item) => ({
-            record,
-            dataIndex: column.dataIndex,
-            title: column.key,
-            editing: isEditing(record),
-          }),
-        };
-      })}
-      rowKey="key"
-      components={{
-        body: {
-          cell: EditableCell,
-        },
-      }}
-      onRow={(record: Item, index: number) => ({
-        onDoubleClick: () => {
-          if (!editingKey) {
-            setEditingKey(record.key);
-          }
-        },
-      })}
-    />
+    <div>
+      <Table
+        rowSelection={rowSelection}
+        components={components}
+        rowClassName={() => 'editable-row'}
+        dataSource={dataSource}
+        columns={columns as ColumnTypes}
+      />
+    </div>
   );
 };
 

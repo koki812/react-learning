@@ -147,20 +147,22 @@ const App: React.FC = () => {
       width: '50%',
       editable: true,
       render: (text: string, record: DataType) => (
-        <span>
-          <EditableCell
-            title="name"
-            editable={true}
-            dataIndex="name"
-            record={record}
-            handleSave={handleSave}
-          >
-            {text}
-          </EditableCell>
-          {dataSource.length >= 1 ? (
-            <Button onClick={() => handleDelete(record.key)}>删除</Button>
-          ) : null}
-        </span>
+        <>
+          <span>
+            <EditableCell
+              title="name"
+              editable={true}
+              dataIndex="name"
+              record={record}
+              handleSave={handleSave}
+            >
+              {text}
+            </EditableCell>
+            {dataSource.length >= 1 ? (
+              <Button onClick={() => handleDelete(record.key)}>删除</Button>
+            ) : null}
+          </span>
+        </>
       ),
     },
     {

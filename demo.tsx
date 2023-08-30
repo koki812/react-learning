@@ -115,6 +115,8 @@ interface DataType {
 type ColumnTypes = Exclude<EditableTableProps['columns'], undefined>;
 
 const App: React.FC = () => {
+  const [isEditing, setIsEditing] = useState(false); // 添加 isEditing 状态
+
   const [dataSource, setDataSource] = useState<DataType[]>([
     {
       key: '0',
@@ -218,8 +220,34 @@ const App: React.FC = () => {
     onChange: onSelectChange,
   };
 
+  const handleSelectAll = () => {
+    if (selectedRowKeys.length === dataSource.length) {
+      // 取消选中所有行
+      setSelectedRowKeys([]);
+    } else {
+      // 选中所有行
+      const allRowKeys = dataSource.map((item) => item.key);
+      setSelectedRowKeys(allRowKeys);
+    }
+  };
+
+  const handleClearAll = () => {
+    setDataSource([]);
+  };
+
+  const handleEditAll = () => {
+    const newEditableState = !isEditing; // 切换编辑状态
+    setIsEditing(newEditableState);
+    if (isEditing) {
+    }
+  };
   return (
     <div>
+      <Button onClick={handleEditAll}>
+        {isEditing ? '切换展示模式' : '切换编辑模式'}
+      </Button>
+      <Button onClick={handleSelectAll}>全选</Button>
+      <Button onClick={handleClearAll}>清空</Button>
       <Table
         rowSelection={rowSelection}
         components={components}
